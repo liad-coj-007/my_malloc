@@ -1,0 +1,25 @@
+#include <unistd.h> 
+
+
+typedef struct MallocMetadata {
+    size_t size;
+    bool is_free;
+    MallocMetadata* next;
+    MallocMetadata* prev;
+};
+
+/**
+ * @brief check the input size for allocation.
+ * @param size The number of bytes to allocate.
+ * @return 0 if the size is valid, -1 if it is invalid.
+*/
+int smallloc_check(size_t size);
+
+
+/**
+ * @brief Allocates memory of the specified size.
+ * @param size The number of bytes to allocate.
+ * @return A pointer to the allocated memory, 
+ * or NULL if the allocation fails.
+*/
+void* smalloc(size_t size);
