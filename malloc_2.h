@@ -31,3 +31,9 @@ void* smalloc(size_t size);
  * @param size The size of each element in bytes.
 */
 void* scalloc(size_t num,size_t size);
+
+/**
+ * @brief free the pointer
+ * @param ptr The pointer to the memory to be freed.
+*/
+void sfree(void* ptr);

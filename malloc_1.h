@@ -9,3 +9,4 @@
  * @return A pointer to the allocated memory, or NULL if the allocation fails.
 */
 void* smalloc(size_t size);
+

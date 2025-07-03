@@ -51,6 +51,9 @@ void* inc_program_break(size_t size){
     metadata->is_free = false;
     metadata->next = NULL;
     metadata->prev = heap_metadata;
+    if(heap_metadata != NULL) {
+        heap_metadata->next = metadata;
+    }
     heap_metadata = metadata;
     return (void*)((char*)ptr + sizeof(MallocMetadata));
 }
@@ -94,8 +97,63 @@ void* scalloc(size_t num,size_t size){
     for(int i = 0; i < total_size; i++){
         *((char*)ptr + i) = 0; // Initialize memory to zero
     }
+
+    return ptr;  
+}
+
+void merge_right(MallocMetadata*& metadata,MallocMetadata*& right){
+    if(right == NULL || !right->is_free){
+        return; 
+    }
+
+    if(metadata == NULL){
+        metadata = right;
+        return; 
+    }
+
+    metadata->size += right->size + sizeof(MallocMetadata);
+    metadata->next = right->next;
+    if(right->next != NULL) {
+        right->next->prev = metadata;
+    }
     
-    return ptr;
-    
+}
+
+void merge(MallocMetadata*& metadata , MallocMetadata*& left,MallocMetadata*& right){
+    merge_right(metadata,right);
+    merge_right(left,metadata);
+}
+
+
+
+bool is_free(MallocMetadata* metadata) {
+    return  metadata == NULL || metadata->is_free;
+}
+
+
+
+
+void sfree(void* ptr){
+    if(ptr == NULL){
+        return; 
+    }
+    MallocMetadata* metadata = (MallocMetadata*)((char*)ptr - sizeof(MallocMetadata));
+    if(metadata->is_free) {
+        return; // Memory is already freed
+    }
+
+    metadata->is_free = true;
+    MallocMetadata* right = metadata->next;
+    MallocMetadata* left = metadata->prev;
+    if(!is_free(left)){
+        merge_right(metadata,right);
+        return;
+    }
+
+    if(!is_free(right)){
+        merge_right(left,metadata);
+        return;
+    }
+    merge(metadata, left, right);
 }
 
