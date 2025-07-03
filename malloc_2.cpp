@@ -84,3 +84,18 @@ void* smalloc(size_t size){
 
 }
 
+void* scalloc(size_t num,size_t size){
+    size_t total_size = num * size;
+    void* ptr = smalloc(total_size);
+    if(ptr == NULL){
+        return NULL; 
+    }
+
+    for(int i = 0; i < total_size; i++){
+        *((char*)ptr + i) = 0; // Initialize memory to zero
+    }
+    
+    return ptr;
+    
+}
+

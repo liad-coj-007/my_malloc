@@ -23,3 +23,11 @@ int smallloc_check(size_t size);
  * or NULL if the allocation fails.
 */
 void* smalloc(size_t size);
+
+/**
+ * @brief Allocates memory for an array of elements of a specified size.
+ * initializes the allocated memory to zero.
+ * @param num The number of elements to allocate.
+ * @param size The size of each element in bytes.
+*/
+void* scalloc(size_t num,size_t size);
