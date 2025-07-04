@@ -9,6 +9,24 @@ typedef struct MallocMetadata {
 };
 
 /**
+ * @brief A structure to hold statistics about memory allocation.
+ * It contains the total amount of free memory.
+ * in bytes.
+ */
+struct Statistics{
+    
+    size_t total_free;
+    size_t total_used;
+
+    /**
+     * @brief Default constructor for the Statistics structure.
+     * put zero on every field.
+    */
+    Statistics();
+
+};
+
+/**
  * @brief check the input size for allocation.
  * @param size The number of bytes to allocate.
  * @return 0 if the size is valid, -1 if it is invalid.
@@ -43,3 +61,31 @@ void sfree(void* ptr);
  * @param oldp The pointer to the memory to be reallocated.
 */
 void* srealloc(void* oldp, size_t size);
+
+/**
+ * @brief return the number of free blocks
+*/
+size_t _num_free_blocks();
+
+/**
+ * @brief return the number of free bytes
+*/
+size_t _num_free_bytes();
+
+/**
+ * @brief return the number of allocated blocks
+*/
+size_t _num_allocated_blocks();
+/**
+ * @brief return the number of allocated bytes
+*/
+size_t _num_allocated_bytes();
+/**
+ * @brief returns the overall number of meta data bytes
+*/
+size_t _num_meta_data_bytes();
+
+/**
+ * @brief returns the size of single meta data
+*/
+size_t _size_meta_data();

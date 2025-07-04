@@ -3,6 +3,9 @@
 
 
 MallocMetadata* heap_metadata = NULL;
+Statistics statistics;
+
+Statistics::Statistics() : total_free(0), total_used(0) {}
 
 int smallloc_check(size_t size){
     size_t max_size = 100000000;
@@ -57,6 +60,7 @@ void* inc_program_break(size_t size){
         heap_metadata->next = metadata;
     }
     heap_metadata = metadata;
+    
     return (void*)((char*)ptr + sizeof(MallocMetadata));
 }
 
@@ -92,12 +96,13 @@ void* smalloc(size_t size){
     if(smallloc_check(size) == -1){
         return NULL; 
     }
-
+    statistics.total_used += size;
     void* ptr;
     if(heap_metadata == NULL || (ptr = find_free_block(size+sizeof(MallocMetadata))) == NULL){
         return inc_program_break(size);
     }
     AddMetaData(ptr, size);
+    statistics.total_free -= size;
     return (void*)((char*)ptr + sizeof(MallocMetadata));
 
 }
@@ -158,7 +163,8 @@ void sfree(void* ptr){
     if(metadata->is_free) {
         return; // Memory is already freed
     }
-
+    statistics.total_free += metadata->size;
+    statistics.total_used -= metadata->size;
     metadata->is_free = true;
     MallocMetadata* right = metadata->next;
     MallocMetadata* left = metadata->prev;
@@ -178,6 +184,8 @@ void sfree(void* ptr){
 
 void* relloc_update_meta(MallocMetadata* metadata,size_t size,void* oldp){
     metadata->is_free = false;
+    statistics.total_used -= metadata->size - size;
+    statistics.total_free += metadata->size - size;
     AddMetaData(metadata, size);
     return oldp;
 }
@@ -200,5 +208,53 @@ void* srealloc(void* oldp, size_t size){
     void* ptr = smalloc(size); 
     std::memmove(ptr, oldp, metadata->size);
     return ptr;
+}
+/**
+ * @brief This function iterates through 
+ * the heap metadata and applies the provided function to each metadata block.
+ * @param f A function that takes a size_t and a MallocMetadata pointer,
+ * and return somthing
+*/
+size_t DoFunc(size_t (*f)(size_t, MallocMetadata*)){
+    size_t result = 0;
+    MallocMetadata* current = heap_metadata;
+    while(current != NULL){
+        result = f(result, current);
+        current = current->prev;
+    }
+    return result;
+}
+
+size_t  _num_free_blocks(){
+    return DoFunc([](size_t count, MallocMetadata* metadata) {
+        if (metadata->is_free) {
+            return count + 1;
+        }
+        return count;
+    });
+}
+
+size_t _num_free_bytes(){
+    return statistics.total_free;
+}
+
+size_t _num_allocated_blocks(){
+    return DoFunc([](size_t count, MallocMetadata* metadata) {
+        return count + 1;
+    });
+}
+
+size_t _num_allocated_bytes(){
+    return statistics.total_free + statistics.total_used;
+}
+
+size_t _num_meta_data_bytes(){
+    return DoFunc([](size_t count, MallocMetadata* metadata) {
+        return count + sizeof(MallocMetadata);
+    });
+}
+
+size_t _size_meta_data_bytes(){
+    return sizeof(MallocMetadata);
 }
 

@@ -1,0 +1,9 @@
+[10, 20, 30, 40, 50]
+Total free bytes: 0
+Total used bytes: 20
+Number of free blocks: 0
+Number of allocated blocks: 1
+Total free bytes: 20
+Total used bytes: 20
+Number of free blocks: 1
+Number of allocated blocks: 1

@@ -1,0 +1,13 @@
+Total free bytes: 0
+Total used bytes: 20
+Number of free blocks: 0
+Number of allocated blocks: 1
+[1, 2, 3, 4, 5, 0, 0, 0, 0, 0]
+Total free bytes: 0
+Total used bytes: 60
+Number of free blocks: 0
+Number of allocated blocks: 2
+Total free bytes: 40
+Total used bytes: 60
+Number of free blocks: 1
+Number of allocated blocks: 2

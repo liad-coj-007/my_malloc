@@ -1,0 +1,7 @@
+add 1 10
+add 2 10
+free 1
+free 2
+print_stats
+add 3 20
+print_stats
