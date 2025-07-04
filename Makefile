@@ -7,7 +7,7 @@ CFLAGS = -Wall -g
 # קבצי הפלט (תוכניות ההרצה)
 TARGET1 = test1
 TARGET2 = test2
-
+TARGET3 = test3
 # קבצי מקור ל-target1
 SRC1 = test1.cpp malloc_1.cpp
 OBJ1 = $(SRC1:.cpp=.o)
@@ -16,8 +16,11 @@ OBJ1 = $(SRC1:.cpp=.o)
 SRC2 = test2.cpp malloc_2.cpp
 OBJ2 = $(SRC2:.cpp=.o)
 
+SRC3 = test3.cpp malloc_3.cpp
+OBJ3 = $(SRC3:.cpp=.o)
+
 # כלל ברירת מחדל
-all: $(TARGET1) $(TARGET2)
+all: $(TARGET1) $(TARGET2) $(TARGET3)
 
 # בניית target1
 $(TARGET1): $(OBJ1)
@@ -27,6 +30,9 @@ $(TARGET1): $(OBJ1)
 $(TARGET2): $(OBJ2)
 	$(CC) $(CFLAGS) $^ -o $@
 
+
+$(TARGET3): $(OBJ3)
+	$(CC) $(CFLAGS) $^ -o $@
 # כלל לקומפילציה של קבצי מקור
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@

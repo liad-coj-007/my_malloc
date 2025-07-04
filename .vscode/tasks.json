@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build test2",
+      "label": "build test3",
       "type": "shell",
-      "command": "make test2",
+      "command": "make test3",
       "group": {
         "kind": "build",
         "isDefault": true

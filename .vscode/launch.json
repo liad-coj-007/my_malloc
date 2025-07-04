@@ -2,16 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug test2",
+      "name": "Debug test3 (malloc_3.cpp + test3.cpp)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/test2",
+      "program": "${workspaceFolder}/test3",
       "args": [],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",
@@ -19,8 +20,7 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "build test2",
-      "miDebuggerPath": "/usr/bin/gdb"
+      "preLaunchTask": "build test3"
     },
     {
       "name": "C/C++ Runner: Debug Session",
