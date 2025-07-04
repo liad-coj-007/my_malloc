@@ -37,3 +37,9 @@ void* scalloc(size_t num,size_t size);
  * @param ptr The pointer to the memory to be freed.
 */
 void sfree(void* ptr);
+
+/**
+ * @brief Reallocates memory for a pointer to a new size.
+ * @param oldp The pointer to the memory to be reallocated.
+*/
+void* srealloc(void* oldp, size_t size);

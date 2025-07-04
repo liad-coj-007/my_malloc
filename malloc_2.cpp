@@ -1,4 +1,6 @@
 #include "malloc_2.h"
+#include <cstring>
+
 
 MallocMetadata* heap_metadata = NULL;
 
@@ -58,10 +60,23 @@ void* inc_program_break(size_t size){
     return (void*)((char*)ptr + sizeof(MallocMetadata));
 }
 
+
+void UpdateMetaData(MallocMetadata* metadata, size_t size) {
+    metadata->size = size;
+    metadata->is_free = false;
+}
+
 void AddMetaData(void* ptr,size_t size){
     MallocMetadata* metadata = (MallocMetadata*)ptr;
     metadata->is_free = false;
-    MallocMetadata* next_metadata = (MallocMetadata*)((char*)ptr + sizeof(MallocMetadata) + size);
+    if(metadata->next == NULL && metadata->size == size +sizeof(MallocMetadata)){
+        //edge case
+        UpdateMetaData(metadata, size);
+        return;
+    }
+
+    MallocMetadata* next_metadata = 
+    (MallocMetadata*)((char*)ptr + sizeof(MallocMetadata) + size);
     if(next_metadata == metadata->next){
         return;
     }
@@ -94,12 +109,13 @@ void* scalloc(size_t num,size_t size){
         return NULL; 
     }
 
-    for(int i = 0; i < total_size; i++){
-        *((char*)ptr + i) = 0; // Initialize memory to zero
-    }
+    std::memset(ptr, 0,total_size);
+
 
     return ptr;  
 }
+
+
 
 void merge_right(MallocMetadata*& metadata,MallocMetadata*& right){
     if(right == NULL || !right->is_free){
@@ -116,6 +132,10 @@ void merge_right(MallocMetadata*& metadata,MallocMetadata*& right){
     if(right->next != NULL) {
         right->next->prev = metadata;
     }
+
+    if(right == heap_metadata) {
+        heap_metadata = metadata;
+    }
     
 }
 
@@ -129,9 +149,6 @@ void merge(MallocMetadata*& metadata , MallocMetadata*& left,MallocMetadata*& ri
 bool is_free(MallocMetadata* metadata) {
     return  metadata == NULL || metadata->is_free;
 }
-
-
-
 
 void sfree(void* ptr){
     if(ptr == NULL){
@@ -155,5 +172,33 @@ void sfree(void* ptr){
         return;
     }
     merge(metadata, left, right);
+}
+
+
+
+void* relloc_update_meta(MallocMetadata* metadata,size_t size,void* oldp){
+    metadata->is_free = false;
+    AddMetaData(metadata, size);
+    return oldp;
+}
+
+
+void* srealloc(void* oldp, size_t size){
+    if(smallloc_check(size) == -1) {
+        return NULL; 
+    }
+
+    if (oldp == NULL) {
+        return smalloc(size);
+    }
+
+    MallocMetadata* metadata = (MallocMetadata*)((char*)oldp - sizeof(MallocMetadata));
+    if (metadata->size >= size) {
+        return relloc_update_meta(metadata, size, oldp);
+    }
+
+    void* ptr = smalloc(size); 
+    std::memmove(ptr, oldp, metadata->size);
+    return ptr;
 }
 

@@ -4,23 +4,39 @@ using namespace std;
 #include <assert.h>
 #include <iostream>
 
-int main(){
-    int* ptr1 = (int*)scalloc(10,sizeof(int));
-    int* ptr2 = (int*)scalloc(10,sizeof(int));
-    int* ptr3 = (int*)scalloc(10,sizeof(int));
-    if(ptr1 == NULL || ptr2 == NULL || ptr3 == NULL){
-        return 1; 
+int* fill_array(int size){
+    int* arr = (int*)smalloc(size * sizeof(int));
+    for(int i = 0; i < size; i++) {
+        arr[i] = i+1;
     }
-    sfree(ptr1);
-    sfree(ptr2);
-    sfree(ptr3);
-    void* heap_ptr = sbrk(0);
-    int* ptr4 = (int*)scalloc(30,sizeof(int));
-    if(heap_ptr != sbrk(0)){
-        cout << "Error: heap size changed after freeing memory." << endl;
-        return 1;
+    return arr;
+}
+
+int TestReallocBig(){
+    int* arr = fill_array(10);
+    int* new_arr = (int*)srealloc(arr, 20 * sizeof(int));
+    for(int i = 0; i < 10; i++){
+        assert(new_arr[i] == i+1);
+    }
+    return 0;
+}
+
+int TestReallocSmall(){
+    int* arr = fill_array(5);
+    int* new_arr = (int*)srealloc(arr, 10 * sizeof(int));
+    for(int i = 0; i < 5; i++){
+        assert(new_arr[i] == i+1);
+    }
+    for(int i = 5; i < 10; i++){
+        assert(new_arr[i] != i+1); 
     }
 
+    return 0;
+}
+
+int main(){
+    TestReallocBig();
+    TestReallocSmall();
     std::cout << "\033[32mAll tests passed!\033[0m" << std::endl;
     return 0;
 }
