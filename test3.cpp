@@ -3,12 +3,15 @@
 using namespace std;
 #include <assert.h>
 #include <iostream>
+#include <cmath>
 
 
 int main(){
-    int* arr = (int*)smalloc(10 * sizeof(int));
-    MetadataPtr metadata = (MetadataPtr)((char*)arr - sizeof(MallocMetadata));
-    cout << "size of metadata: " << sizeof(MallocMetadata) << endl;
-    cout << metadata->size << endl;
+    int* arr1 = (int*)smalloc(10 * sizeof(int));
+    int* arr2 = (int*)srealloc(arr1, 5 * sizeof(int));
+    MetadataPtr metadata = (MetadataPtr)((char*)arr1 - sizeof(MallocMetadata));
+
+    assert(metadata->size == 64);
+    cout << "success " << endl;
     return 0;
 }

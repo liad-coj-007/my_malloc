@@ -3,6 +3,7 @@
 
 struct MallocMetadata {
     size_t size;
+    bool is_free;
     MallocMetadata* next;
     MallocMetadata* prev;
 };
@@ -56,12 +57,7 @@ private:
     */
     MetadataPtr FindFreeBlock(size_t size);
 
-    /**
-     * @brief get the minimal metadata we need
-     * @param metadata The metadata pointer to align.
-     * @param size - the size of the block to align.
-    */
-    MetadataPtr AlignHeap(MetadataPtr metadata,size_t size);
+
 
     /**
      * @brief pop the metadata pointer from the free list.
@@ -79,6 +75,20 @@ private:
      * @param metadata The metadata pointer to add.
     */
     void AddMeta(MetadataPtr metadata);
+    /**
+     * @brief return true if the datas is buddies else
+     * false
+     * @param a The first metadata pointer.
+     * @param b The second metadata pointer.
+     * @return true if the two metadata pointers are buddies
+     * , false otherwise.
+    */
+    bool isBuddy(MetadataPtr a, MetadataPtr b);
+    /**
+     * @brief erase the metadata from the free list.
+    */
+    void Erase(MetadataPtr metadata);
+
 public:
     /**
      * @brief build the allocator
@@ -91,9 +101,25 @@ public:
      * @param size The size of the block to allocate.
     */
     MetadataPtr getFreeBlock(size_t size);
+    /**
+     * @brief free the allocation
+    */
+    MetadataPtr FreeData(MetadataPtr metadata);
+    /**
+     * @brief get the total free memory in bytes.
+    */
+    size_t& getTotalFree();
+    /**
+     * @brief get the total used memory in bytes.
+    */
+    size_t& getTotalUsed();
 
-
-
+    /**
+     * @brief get the minimal metadata we need
+     * @param metadata The metadata pointer to align.
+     * @param size - the size of the block to align.
+    */
+    MetadataPtr AlignHeap(MetadataPtr metadata,size_t size);
 
 };
 
