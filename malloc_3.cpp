@@ -5,6 +5,7 @@
 
 
 const int heap_size = 4 * 1024 * 1024; // 4MB
+const int max_alloc = pow(2, 17); // 128KB
 MallocBuddyAllocator::MallocBuddyAllocator() : stats() {
      
     for(int i = 0; i < SIZE_FREE_LIST; i++) {
@@ -25,12 +26,12 @@ MetadataPtr MallocBuddyAllocator::FindFreeBlock(size_t size) {
     size_t order = log2(size+sizeof(MallocMetadata));
     for(size_t i = order; i < SIZE_FREE_LIST; i++){
         if(free_lists[i] == NULL) {
-            continue; // No free block of this size
+            continue; 
         }
         return free_lists[i];
     }
 
-    return NULL; // No suitable free block found  
+    return NULL;  
 }
 
 bool MallocBuddyAllocator::isBuddy(MetadataPtr a, MetadataPtr b) {
@@ -54,10 +55,14 @@ void MallocBuddyAllocator::Erase(MetadataPtr metadata){
     metadata->next = NULL;
     metadata->prev = NULL;
     if(prev != NULL){
-        prev->next = next; // Remove from the free list
+        prev->next = next; 
+    }else{
+        size_t idx = log2(metadata->size);
+        free_lists[idx] = next; 
     }
+
     if(next != NULL) {
-        next->prev = prev; // Remove from the free list
+        next->prev = prev; 
     }
 }
 
@@ -91,22 +96,9 @@ MetadataPtr MallocBuddyAllocator::AlignHeap(MetadataPtr metadata,size_t size) {
     metadata->size /= 2; 
     MetadataPtr buddy = (MetadataPtr)((char*)metadata + metadata->size);
     buddy->size = metadata->size;
-    buddy->is_free = true;
+    buddy->useage = 0;
     AddMeta(buddy);
     return AlignHeap(metadata, size);
-}
-
-void MallocBuddyAllocator::Pop(MetadataPtr metadata) {
-    if(metadata == NULL){
-        return; 
-    }
-    size_t order = log2(metadata->size);
-    free_lists[order] = metadata->next;
-    MetadataPtr next = metadata->next;
-    if(next != NULL) {
-        next->prev = metadata->prev;
-    }
-    metadata->next = NULL;
 }
 
 void MallocBuddyAllocator::AddMeta(MetadataPtr metadata){
@@ -114,7 +106,7 @@ void MallocBuddyAllocator::AddMeta(MetadataPtr metadata){
     metadata->next = NULL;
     metadata->prev = NULL;
     if(free_lists[order] == NULL) {
-        free_lists[order] = metadata; // Add to the free list
+        free_lists[order] = metadata; 
         return;
     }
 
@@ -135,7 +127,7 @@ void MallocBuddyAllocator::AddMeta(MetadataPtr metadata){
 
 MetadataPtr MallocBuddyAllocator::getFreeBlock(size_t size){
     MetadataPtr metadata = FindFreeBlock(size + sizeof(MallocMetadata));
-    Pop(metadata);
+    Erase(metadata);
     metadata = AlignHeap(metadata, size + sizeof(MallocMetadata));
     stats.total_free -= metadata->size;
     return metadata;
@@ -178,7 +170,6 @@ void MallocBuddyAllocator::BuildHeap() {
     // Initialize the heap with a single large free block
     void* ptr = getHeap();
     if (ptr == NULL) {
-        // Handle error
         return;
     }
     const int num_blocks = 32;
@@ -189,7 +180,7 @@ void MallocBuddyAllocator::BuildHeap() {
         metadata->size = size;
         metadata->next = NULL;
         metadata->prev = current;
-        metadata->is_free = true;
+        metadata->useage = 0;
         if(current != NULL) {
             current->next = metadata;
         }
@@ -225,41 +216,38 @@ int smallloc_check(size_t size){
     return 0; 
 }
 
-void UpdateMetaData(MallocMetadata* metadata, size_t size) {
-    metadata->size = size;
-}
 
-void AddMetaData(void* ptr,size_t size){
-    MallocMetadata* metadata = (MallocMetadata*)ptr;
-    if(metadata->next == NULL && metadata->size == size +sizeof(MallocMetadata)){
-        //edge case
-        UpdateMetaData(metadata, size);
-        return;
+void* BigAlloc(size_t size){
+    void* ptr = mmap(NULL, size + sizeof(MallocMetadata), 
+    PROT_READ | PROT_WRITE,
+                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if(ptr == MAP_FAILED) {
+        return NULL; // Allocation failed
     }
-
-    MallocMetadata* next_metadata = 
-    (MallocMetadata*)((char*)ptr + sizeof(MallocMetadata) + size);
-    if(next_metadata == metadata->next){
-        return;
-    }
-    next_metadata->size = metadata->size - size - sizeof(MallocMetadata);
-    next_metadata->next = metadata->next;
-    next_metadata->prev = metadata;
-    metadata->next = next_metadata;
-    metadata->size = size;
+    MetadataPtr metadata = (MetadataPtr)ptr;
+    metadata->size = size + sizeof(MallocMetadata);
+    metadata->prev = NULL;
+    metadata->next = NULL;
+    metadata->useage = size;
+    MallocBuddyAllocator& allocator = 
+    MallocBuddyAllocator::getInstance();
+    allocator.getTotalUsed() += size;
+    return (void*)((char*)ptr + sizeof(MallocMetadata));
 }
-
-
 
 void* smalloc(size_t size){
+    MallocBuddyAllocator& allocator = 
+    MallocBuddyAllocator::getInstance();
     if(smallloc_check(size) == -1){
         return NULL; 
     }
 
-    MallocBuddyAllocator& allocator = 
-    MallocBuddyAllocator::getInstance();
+    if(size +sizeof(MallocMetadata) > max_alloc){
+        return BigAlloc(size);
+    }
+  
     MetadataPtr metadata = allocator.getFreeBlock(size);
-    metadata->is_free = false;
+    metadata->useage = size;
     return (void*)((char*)metadata + sizeof(MallocMetadata));
 }
 
@@ -281,7 +269,15 @@ void* scalloc(size_t num,size_t size){
 
 
 bool is_free(MallocMetadata* metadata) {
-    return  metadata == NULL || metadata->is_free;
+    return  metadata == NULL || metadata->useage == 0;
+}
+
+void FreeBigAlloc(void *ptr){
+    MallocMetadata* metadata = (MallocMetadata*)ptr;
+    MallocBuddyAllocator& allocator = 
+    MallocBuddyAllocator::getInstance();
+    allocator.getTotalUsed() -= metadata->useage;
+    munmap(ptr, metadata->size);
 }
 
 void sfree(void* ptr){
@@ -290,22 +286,64 @@ void sfree(void* ptr){
     if(is_free(metadata)) {
         return; // Already freed
     }
+    if(metadata->size > max_alloc){
+        FreeBigAlloc(ptr);
+        return ;
+    }
     MallocBuddyAllocator& allocator 
     =  MallocBuddyAllocator::getInstance();
     MetadataPtr real_block =  allocator.FreeData(metadata);
-    real_block->is_free = true;
+    real_block->useage = 0;
     allocator.getTotalFree() += metadata->size;
 }
 
-
+void* realloc_update_bigAlloc(MallocMetadata* metadata, size_t size, void* oldp) {
+    MallocBuddyAllocator& allocator =  MallocBuddyAllocator::getInstance();
+    allocator.getTotalUsed() -= metadata->useage - size;
+    metadata->useage = size;
+    return oldp;
+}
 
 void* relloc_update_meta(MallocMetadata* metadata,size_t size,void* oldp){
+    if(metadata->size > max_alloc){
+        return realloc_update_bigAlloc(metadata, size, oldp);
+    }
     MallocBuddyAllocator& allocator =  MallocBuddyAllocator::getInstance();
     MetadataPtr real_block = allocator.AlignHeap(metadata, size + sizeof(MallocMetadata));
+    real_block->useage = size;
     allocator.getTotalFree() += metadata->size - real_block->size;
     return oldp;
 }
 
+MetadataPtr MallocBuddyAllocator::SmartReallocHelper(MetadataPtr metadata,size_t size){
+    if(metadata->size >= size){
+        metadata->useage = size - sizeof(MallocMetadata);
+        return metadata;
+    }
+    AddMeta(metadata);
+    size_t idx = log2(metadata->size);
+
+    if(!isBuddy(metadata,metadata->next) || idx == MAX_ORDER) {
+        return metadata;
+    }
+    MetadataPtr buddy = metadata->next;
+    Erase(metadata);
+    Erase(buddy);
+    metadata->size *= 2;
+    return SmartReallocHelper(metadata, size);
+}
+
+
+void* MallocBuddyAllocator::SmartRealloc(void* oldp, size_t size) {
+    MetadataPtr metadata = 
+    (MetadataPtr)((char*)oldp - sizeof(MallocMetadata));
+    MetadataPtr real_block = SmartReallocHelper(metadata, size + sizeof(MallocMetadata));
+    if(real_block->size >= size + sizeof(MallocMetadata)){
+        return oldp;
+    }
+    AlignHeap(real_block, metadata->size);
+    return NULL;
+}
 
 void* srealloc(void* oldp, size_t size){
     if(smallloc_check(size) == -1) {
@@ -320,26 +358,35 @@ void* srealloc(void* oldp, size_t size){
     if (metadata->size >= size + sizeof(MallocMetadata)){
         return relloc_update_meta(metadata, size, oldp);
     }
-
-    void* ptr = smalloc(size); 
-    std::memmove(ptr, oldp, metadata->size);
+    MallocBuddyAllocator& allocator = MallocBuddyAllocator::getInstance();
+    void* ptr = allocator.SmartRealloc(oldp, size);
+    if(ptr != NULL) {
+        return ptr; 
+    }
+    ptr = smalloc(size);
+    std::memmove(ptr, oldp, metadata->useage);
     return ptr;
 }
-/**
- * @brief This function iterates through 
- * the heap metadata and applies the provided function to each metadata block.
- * @param f A function that takes a size_t and a MallocMetadata pointer,
- * and return somthing
-*/
-size_t DoFunc(size_t (*f)(size_t, MallocMetadata*)){
+
+
+size_t MallocBuddyAllocator::DoFunc(size_t (*f)(size_t, MallocMetadata*), MallocMetadata* metadata) {
     size_t result = 0;
-    MallocMetadata* current = heap_metadata;
-    while(current != NULL){
-        result = f(result, current);
-        current = current->prev;
+    while(metadata != NULL) {
+        result = f(result, metadata);
+        metadata = metadata->next;
     }
     return result;
 }
+
+size_t MallocBuddyAllocator::DoFunc(size_t (*f)(size_t, MetadataPtr)){
+    size_t result = 0;
+    for(int i = 0; i < SIZE_FREE_LIST; i++) {
+        result += DoFunc(f, free_lists[i]);
+    }
+    return result;
+}
+
+
 
 size_t  _num_free_blocks(){
     return 0;
@@ -350,9 +397,7 @@ size_t _num_free_bytes(){
 }
 
 size_t _num_allocated_blocks(){
-    return DoFunc([](size_t count, MallocMetadata* metadata) {
-        return count + 1;
-    });
+    return 0;
 }
 
 size_t _num_allocated_bytes(){
@@ -360,9 +405,7 @@ size_t _num_allocated_bytes(){
 }
 
 size_t _num_meta_data_bytes(){
-    return DoFunc([](size_t count, MallocMetadata* metadata) {
-        return count + sizeof(MallocMetadata);
-    });
+    return 0;
 }
 
 size_t _size_meta_data_bytes(){

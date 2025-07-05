@@ -1,12 +1,14 @@
 #include <unistd.h> 
+#include <sys/mman.h>  // For mmap(), munmap()
 
 
 struct MallocMetadata {
+    size_t useage;
     size_t size;
-    bool is_free;
     MallocMetadata* next;
     MallocMetadata* prev;
 };
+
  
 typedef MallocMetadata* MetadataPtr;
 // maximum order of the buddy system
@@ -58,11 +60,6 @@ private:
     MetadataPtr FindFreeBlock(size_t size);
 
 
-
-    /**
-     * @brief pop the metadata pointer from the free list.
-    */
-    void Pop(MetadataPtr metadata);
     /**
      * @brief Push a metadata pointer to the free list.
      * @param metadata The metadata pointer to push.
@@ -88,6 +85,20 @@ private:
      * @brief erase the metadata from the free list.
     */
     void Erase(MetadataPtr metadata);
+
+    /**
+     * @brief connect the buddies in the high order
+     * that means metadata < buddy so the the metadata is in the left
+    */
+    MetadataPtr SmartReallocHelper(MetadataPtr metadata,size_t size);
+
+    /**
+     * @brief This function iterates through 
+     * the heap metadata and applies the provided function to each metadata block.
+     * @param f A function that takes a size_t and a MallocMetadata pointer,
+     * and return somthing
+    */
+    size_t DoFunc(size_t (*f)(size_t, MetadataPtr),MetadataPtr metadata);
 
 public:
     /**
@@ -120,6 +131,20 @@ public:
      * @param size - the size of the block to align.
     */
     MetadataPtr AlignHeap(MetadataPtr metadata,size_t size);
+
+    /**
+     * @brief do smart realloc if we can allocate the oldp blocks
+     * else we do smalloc
+    */
+    void* SmartRealloc(void* oldp, size_t size);
+
+    /**
+     * @brief This function iterates through
+     * the free heap metadata 
+     * and applies the provided function to each metadata block.
+    */
+    size_t DoFunc(size_t (*f)(size_t, MetadataPtr));
+    
 
 };
 
