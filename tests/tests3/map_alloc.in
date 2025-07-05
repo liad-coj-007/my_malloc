@@ -1,0 +1,6 @@
+add 1 32768
+put 1 100 3
+print 1 100 100
+print_stats
+free 1
+print_stats

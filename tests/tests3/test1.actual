@@ -1,0 +1,15 @@
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                               Memory Statistics
+                               =================
+Free blocks: 32
+Free bytes: 4127744
+Allocated blocks: 33
+Allocated bytes: 4193248
+Meta data bytes: 1056
+                               Memory Statistics
+                               =================
+Free blocks: 32
+Free bytes: 4193280
+Allocated blocks: 32
+Allocated bytes: 4193280
+Meta data bytes: 1024

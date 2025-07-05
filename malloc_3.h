@@ -22,8 +22,11 @@ static const int SIZE_FREE_LIST = MAX_ORDER+1;
  */
 struct Statistics{
     
-    size_t total_free;
-    size_t total_used;
+    size_t free_bytes;
+    size_t alloc_bytes;
+    size_t alloc_blocks;
+    size_t free_blocks;
+    size_t num_metadata;
 
     /**
      * @brief Default constructor for the Statistics structure.
@@ -119,11 +122,25 @@ public:
     /**
      * @brief get the total free memory in bytes.
     */
-    size_t& getTotalFree();
+    size_t& getFreeBytes();
+
+    /**
+     * @brief get the total free memory in blocks.
+    */
+    size_t& getFreeBlocks();
     /**
      * @brief get the total used memory in bytes.
     */
-    size_t& getTotalUsed();
+    size_t& getAllocBytes();
+    /**
+     * @brief get the total alloc memory in blocks.
+    */
+    size_t& getAllockBlocks();
+
+    /**
+     * @brief get the total used memory in blocks.
+    */
+    size_t& getMetaDataBytes();
 
     /**
      * @brief get the minimal metadata we need

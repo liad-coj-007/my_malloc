@@ -2,10 +2,16 @@
 #include <cstring>
 #include <cmath>
 #include <cstdint>
+#include <cassert>
 
-
+/**
+ * @brief a global variable that holds the
+ *  heap - buddy size. 
+*/
 const int heap_size = 4 * 1024 * 1024; // 4MB
 const int max_alloc = pow(2, 17); // 128KB
+const int num_blocks = 32;
+
 MallocBuddyAllocator::MallocBuddyAllocator() : stats() {
      
     for(int i = 0; i < SIZE_FREE_LIST; i++) {
@@ -14,13 +20,26 @@ MallocBuddyAllocator::MallocBuddyAllocator() : stats() {
     BuildHeap();    
 }
 
-size_t& MallocBuddyAllocator::getTotalFree() {
-    return stats.total_free;
+size_t& MallocBuddyAllocator::getFreeBlocks(){
+    return stats.free_blocks;
 }
 
-size_t& MallocBuddyAllocator::getTotalUsed() {
-    return stats.total_used;
+size_t& MallocBuddyAllocator::getFreeBytes(){
+    return stats.free_bytes;
 }
+
+size_t& MallocBuddyAllocator::getAllockBlocks(){
+    return stats.alloc_blocks;
+}
+
+size_t& MallocBuddyAllocator::getAllocBytes(){
+    return stats.alloc_bytes;
+}
+
+size_t& MallocBuddyAllocator::getMetaDataBytes(){
+    return stats.num_metadata;
+}
+
 
 MetadataPtr MallocBuddyAllocator::FindFreeBlock(size_t size) {
     size_t order = log2(size+sizeof(MallocMetadata));
@@ -79,6 +98,11 @@ MetadataPtr MallocBuddyAllocator::FreeData(MetadataPtr metadata) {
     if(buddy == NULL || idx == MAX_ORDER) {
         return metadata;
     }
+    getFreeBlocks() -= 1;
+    getAllockBlocks() -= 1;
+    getMetaDataBytes() -= sizeof(MallocMetadata);
+    getFreeBytes() += sizeof(MallocMetadata);
+    getAllocBytes() += sizeof(MallocMetadata);
     Erase(metadata);
     Erase(buddy);
     MetadataPtr new_metadata = metadata > buddy ? buddy: metadata;
@@ -98,6 +122,15 @@ MetadataPtr MallocBuddyAllocator::AlignHeap(MetadataPtr metadata,size_t size) {
     buddy->size = metadata->size;
     buddy->useage = 0;
     AddMeta(buddy);
+    getFreeBlocks() += 1;
+    getAllockBlocks() += 1;
+    getMetaDataBytes() += sizeof(MallocMetadata);
+    if(metadata->useage != 0){
+        getFreeBytes() += metadata->size - sizeof(MallocMetadata);
+    }else{
+        getFreeBytes() -= sizeof(MallocMetadata);
+        getAllocBytes() -= sizeof(MallocMetadata);
+    }
     return AlignHeap(metadata, size);
 }
 
@@ -129,7 +162,8 @@ MetadataPtr MallocBuddyAllocator::getFreeBlock(size_t size){
     MetadataPtr metadata = FindFreeBlock(size + sizeof(MallocMetadata));
     Erase(metadata);
     metadata = AlignHeap(metadata, size + sizeof(MallocMetadata));
-    stats.total_free -= metadata->size;
+    getFreeBlocks() -= 1;
+    getFreeBytes() += -metadata->size + sizeof(MallocMetadata);
     return metadata;
 }
 
@@ -172,19 +206,18 @@ void MallocBuddyAllocator::BuildHeap() {
     if (ptr == NULL) {
         return;
     }
-    const int num_blocks = 32;
-    const int size = heap_size / num_blocks;
+
     MetadataPtr current = nullptr;
     for(int i = 0; i < num_blocks;i++){
         MetadataPtr metadata = (MetadataPtr)ptr;
-        metadata->size = size;
+        metadata->size = max_alloc;
         metadata->next = NULL;
         metadata->prev = current;
         metadata->useage = 0;
         if(current != NULL) {
             current->next = metadata;
         }
-        ptr = (void*)((char*)ptr  + size);
+        ptr = (void*)((char*)ptr  + max_alloc);
         current = metadata;
     }
 
@@ -202,11 +235,14 @@ MallocBuddyAllocator& MallocBuddyAllocator::getInstance() {
 
 
 
-MallocMetadata* heap_metadata = NULL;
-Statistics statistics;
 
-Statistics::Statistics() : 
-total_free(heap_size), total_used(heap_size) {}
+Statistics::Statistics(){
+    free_bytes =  num_blocks*(max_alloc - sizeof(MallocMetadata));
+    alloc_bytes = num_blocks*(max_alloc - sizeof(MallocMetadata));
+    alloc_blocks = num_blocks;
+    free_blocks = num_blocks;
+    num_metadata = num_blocks*(sizeof(MallocMetadata));
+}
 
 int smallloc_check(size_t size){
     size_t max_size = 100000000;
@@ -231,7 +267,9 @@ void* BigAlloc(size_t size){
     metadata->useage = size;
     MallocBuddyAllocator& allocator = 
     MallocBuddyAllocator::getInstance();
-    allocator.getTotalUsed() += size;
+    allocator.getAllocBytes() += metadata->useage;
+    allocator.getAllockBlocks() += 1;
+    allocator.getMetaDataBytes() += sizeof(MallocMetadata);
     return (void*)((char*)ptr + sizeof(MallocMetadata));
 }
 
@@ -248,6 +286,7 @@ void* smalloc(size_t size){
   
     MetadataPtr metadata = allocator.getFreeBlock(size);
     metadata->useage = size;
+    
     return (void*)((char*)metadata + sizeof(MallocMetadata));
 }
 
@@ -273,10 +312,14 @@ bool is_free(MallocMetadata* metadata) {
 }
 
 void FreeBigAlloc(void *ptr){
-    MallocMetadata* metadata = (MallocMetadata*)ptr;
+    MetadataPtr metadata = (MetadataPtr)ptr;
     MallocBuddyAllocator& allocator = 
     MallocBuddyAllocator::getInstance();
-    allocator.getTotalUsed() -= metadata->useage;
+    allocator.getAllocBytes() -= metadata->size - sizeof(MallocMetadata);
+    allocator.getAllockBlocks() -= 1;
+    size_t free_size = metadata->size - sizeof(MallocMetadata) - metadata->useage;
+    allocator.getFreeBytes() -= free_size;
+    allocator.getMetaDataBytes() -= sizeof(MallocMetadata);
     munmap(ptr, metadata->size);
 }
 
@@ -287,19 +330,22 @@ void sfree(void* ptr){
         return; // Already freed
     }
     if(metadata->size > max_alloc){
-        FreeBigAlloc(ptr);
+        FreeBigAlloc(metadata);
         return ;
     }
     MallocBuddyAllocator& allocator 
     =  MallocBuddyAllocator::getInstance();
+    allocator.getFreeBlocks() += 1;
+    allocator.getFreeBytes() += metadata->size - sizeof(MallocMetadata);
     MetadataPtr real_block =  allocator.FreeData(metadata);
     real_block->useage = 0;
-    allocator.getTotalFree() += metadata->size;
+
 }
 
 void* realloc_update_bigAlloc(MallocMetadata* metadata, size_t size, void* oldp) {
     MallocBuddyAllocator& allocator =  MallocBuddyAllocator::getInstance();
-    allocator.getTotalUsed() -= metadata->useage - size;
+    size_t delta = metadata->useage - size;
+    allocator.getFreeBytes() += metadata->useage - size;
     metadata->useage = size;
     return oldp;
 }
@@ -311,7 +357,6 @@ void* relloc_update_meta(MallocMetadata* metadata,size_t size,void* oldp){
     MallocBuddyAllocator& allocator =  MallocBuddyAllocator::getInstance();
     MetadataPtr real_block = allocator.AlignHeap(metadata, size + sizeof(MallocMetadata));
     real_block->useage = size;
-    allocator.getTotalFree() += metadata->size - real_block->size;
     return oldp;
 }
 
@@ -330,6 +375,9 @@ MetadataPtr MallocBuddyAllocator::SmartReallocHelper(MetadataPtr metadata,size_t
     Erase(metadata);
     Erase(buddy);
     metadata->size *= 2;
+    getFreeBlocks() -= 1;
+    getFreeBytes() -= buddy->size - sizeof(MallocMetadata);
+    getMetaDataBytes() -= sizeof(MallocMetadata);
     return SmartReallocHelper(metadata, size);
 }
 
@@ -341,7 +389,11 @@ void* MallocBuddyAllocator::SmartRealloc(void* oldp, size_t size) {
     if(real_block->size >= size + sizeof(MallocMetadata)){
         return oldp;
     }
+    bool isfree = is_free(real_block);
+    size_t usage = real_block->useage;
+    real_block->useage = isfree ? size : usage;
     AlignHeap(real_block, metadata->size);
+    real_block->useage = usage;
     return NULL;
 }
 
@@ -369,7 +421,8 @@ void* srealloc(void* oldp, size_t size){
 }
 
 
-size_t MallocBuddyAllocator::DoFunc(size_t (*f)(size_t, MallocMetadata*), MallocMetadata* metadata) {
+size_t MallocBuddyAllocator::DoFunc(size_t (*f)(size_t, MetadataPtr), 
+MetadataPtr metadata) {
     size_t result = 0;
     while(metadata != NULL) {
         result = f(result, metadata);
@@ -389,23 +442,23 @@ size_t MallocBuddyAllocator::DoFunc(size_t (*f)(size_t, MetadataPtr)){
 
 
 size_t  _num_free_blocks(){
-    return 0;
+    return MallocBuddyAllocator::getInstance().getFreeBlocks();
 }
 
 size_t _num_free_bytes(){
-    return statistics.total_free;
+    return MallocBuddyAllocator::getInstance().getFreeBytes();
 }
 
 size_t _num_allocated_blocks(){
-    return 0;
+    return MallocBuddyAllocator::getInstance().getAllockBlocks();
 }
 
 size_t _num_allocated_bytes(){
-    return statistics.total_free + statistics.total_used;
+    return MallocBuddyAllocator::getInstance().getAllocBytes();
 }
 
 size_t _num_meta_data_bytes(){
-    return 0;
+    return MallocBuddyAllocator::getInstance().getMetaDataBytes();
 }
 
 size_t _size_meta_data_bytes(){

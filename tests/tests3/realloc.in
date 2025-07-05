@@ -1,0 +1,5 @@
+add 1 16376
+realloc 2 8184 1
+print_stats
+realloc 3 16376 2
+print_stats

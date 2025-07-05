@@ -1,0 +1,15 @@
+[3]
+                               Memory Statistics
+                               =================
+Free blocks: ME
+Free bytes: MH
+Allocated blocks: ME+1
+Allocated bytes: MH+MV 
+Meta data bytes: ME*ME+ME
+                               Memory Statistics
+                               =================
+Free blocks: ME
+Free bytes: MH
+Allocated blocks: ME
+Allocated bytes: MH 
+Meta data bytes: ME*ME
