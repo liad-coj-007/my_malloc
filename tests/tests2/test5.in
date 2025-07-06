@@ -1,9 +1,0 @@
-add 5 5
-add 6 5
-eq 5 5 0 1
-eq 5 6 1 1
-eq 5 6 2 1
-eq 6 5 3 1
-print_stats
-free 5
-print_stats

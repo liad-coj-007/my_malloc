@@ -89,20 +89,22 @@ void AddMetaData(void* ptr,size_t size){
     next_metadata->next = metadata->next;
     next_metadata->prev = metadata;
     metadata->next = next_metadata;
-    metadata->size = size;
 }
 
 void* smalloc(size_t size){
     if(smallloc_check(size) == -1){
         return NULL; 
     }
-    statistics.total_used += size;
+   
     void* ptr;
-    if(heap_metadata == NULL || (ptr = find_free_block(size+sizeof(MallocMetadata))) == NULL){
+    if(heap_metadata == NULL || (ptr = find_free_block(size)) == NULL){
+        statistics.total_used += size;
         return inc_program_break(size);
     }
-    AddMetaData(ptr, size);
-    statistics.total_free -= size;
+    MallocMetadata* metadata = (MallocMetadata*)ptr;
+    metadata->is_free = false;
+    statistics.total_free -= metadata->size;
+    statistics.total_used += metadata->size;
     return (void*)((char*)ptr + sizeof(MallocMetadata));
 
 }
@@ -166,27 +168,17 @@ void sfree(void* ptr){
     statistics.total_free += metadata->size;
     statistics.total_used -= metadata->size;
     metadata->is_free = true;
-    MallocMetadata* right = metadata->next;
-    MallocMetadata* left = metadata->prev;
-    if(!is_free(left)){
-        merge_right(metadata,right);
-        return;
-    }
-
-    if(!is_free(right)){
-        merge_right(left,metadata);
-        return;
-    }
-    merge(metadata, left, right);
 }
 
 
 
 void* relloc_update_meta(MallocMetadata* metadata,size_t size,void* oldp){
+    
+    statistics.total_used = metadata->is_free ? statistics.total_used + metadata->size 
+    : statistics.total_used ;
+    statistics.total_free = metadata->is_free ? statistics.total_free - metadata->size 
+    : statistics.total_free;
     metadata->is_free = false;
-    statistics.total_used -= metadata->size - size;
-    statistics.total_free += metadata->size - size;
-    AddMetaData(metadata, size);
     return oldp;
 }
 
@@ -207,8 +199,11 @@ void* srealloc(void* oldp, size_t size){
 
     void* ptr = smalloc(size); 
     std::memmove(ptr, oldp, metadata->size);
+    sfree(oldp);
     return ptr;
 }
+
+
 /**
  * @brief This function iterates through 
  * the heap metadata and applies the provided function to each metadata block.
@@ -254,7 +249,7 @@ size_t _num_meta_data_bytes(){
     });
 }
 
-size_t _size_meta_data_bytes(){
+size_t _size_meta_data(){
     return sizeof(MallocMetadata);
 }
 

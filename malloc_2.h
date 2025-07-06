@@ -1,7 +1,7 @@
 #include <unistd.h> 
 
 
-typedef struct MallocMetadata {
+struct MallocMetadata {
     size_t size;
     bool is_free;
     MallocMetadata* next;

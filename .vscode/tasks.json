@@ -2,14 +2,23 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build test3",
+      "label": "build test2",
       "type": "shell",
-      "command": "make test3",
+      "command": "g++",
+      "args": [
+        "-g",
+        "malloc_2.cpp",
+        "test2.cpp",
+        "-o",
+        "test2"
+      ],
       "group": {
         "kind": "build",
         "isDefault": true
       },
-      "problemMatcher": []
+      "problemMatcher": ["$gcc"],
+      "detail": "Build test2 from malloc_2.cpp and test2.cpp"
     }
   ]
 }
+

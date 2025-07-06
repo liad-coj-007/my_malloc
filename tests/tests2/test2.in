@@ -1,7 +1,0 @@
-# calloc array id=2 with 3 elements, each of size 4 (int)
-scalloc 2 3 4
-print 2 0 2
-put 2 1 100
-print 2 0 2
-free 2
-print_stats

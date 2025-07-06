@@ -4,7 +4,7 @@ from pathlib import Path
 import difflib
 import re
 
-TEST_DIR = Path("tests/tests3")
+TEST_DIR = Path("my_tests/tests3")
 BINARY_PATH = Path(__file__).parent / "test3"
 
 FLAGS = {

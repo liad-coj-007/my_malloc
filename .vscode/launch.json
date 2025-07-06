@@ -2,10 +2,10 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug test3 (malloc_3.cpp + test3.cpp)",
+      "name": "Debug test2 (malloc_2.cpp + test2.cpp)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/test3",
+      "program": "${workspaceFolder}/test2",
       "args": [],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
@@ -20,26 +20,10 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "build test3"
-    },
-    {
-      "name": "C/C++ Runner: Debug Session",
-      "type": "cppdbg",
-      "request": "launch",
-      "args": [],
-      "stopAtEntry": false,
-      "externalConsole": false,
-      "cwd": "/home/student/Wet/HW4",
-      "program": "/home/student/Wet/HW4/build/Debug/outDebug",
-      "MIMode": "gdb",
-      "miDebuggerPath": "gdb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ]
+      "preLaunchTask": "build test2"
     }
   ]
 }
+
+
+

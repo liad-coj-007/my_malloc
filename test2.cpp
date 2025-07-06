@@ -204,22 +204,35 @@ int TestReallocSmall(){
 
 
 int main(int argc, char* argv[]) {
-    std::istream* input = &std::cin;
-    std::ifstream file;
+    // std::istream* input = &std::cin;
+    // std::ifstream file;
 
-    if (argc > 1) {
-        file.open(argv[1]);
-        if (!file.is_open()) {
-            std::cerr << "Failed to open file: " << argv[1] << std::endl;
-            return 1;
-        }
-        input = &file;
-    }
+    // if (argc > 1) {
+    //     file.open(argv[1]);
+    //     if (!file.is_open()) {
+    //         std::cerr << "Failed to open file: " << argv[1] << std::endl;
+    //         return 1;
+    //     }
+    //     input = &file;
+    // }
 
-    std::string line;
-    while (std::getline(*input, line)) {
-        if (line.empty() || line[0] == '#') continue;  // skip empty/comments
-        runCommand(line);
-    }
+    // std::string line;
+    // while (std::getline(*input, line)) {
+    //     if (line.empty() || line[0] == '#') continue;  // skip empty/comments
+    //     runCommand(line);
+    // }
+    int* arr1 = (int*)smalloc(10 * sizeof(int));
+    int* arr2 = (int*)smalloc(10 * sizeof(int));
+    int* arr3 = (int*)smalloc(10 * sizeof(int));
+    sfree(arr1);
+    sfree(arr2);
+    sfree(arr3);
+    int* arr4 = (int*)smalloc(10 * sizeof(int));
+    cout << "arr1: " << arr1 << endl;
+    cout << "arr2: " << arr2 << endl;
+    cout << "arr3: " << arr3 << endl;
+    cout << "arr4: "  << arr4 << endl; 
+
+    assert(arr4 == arr1);
     return 0;
 }

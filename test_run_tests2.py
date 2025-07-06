@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 import difflib
 
-TEST_DIR = Path("tests/tests2")
+TEST_DIR = Path("my_tests/tests2")
 BINARY_PATH = Path(__file__).parent / "test2"
 
 def get_test_files():

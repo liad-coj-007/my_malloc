@@ -344,7 +344,6 @@ void sfree(void* ptr){
 
 void* realloc_update_bigAlloc(MallocMetadata* metadata, size_t size, void* oldp) {
     MallocBuddyAllocator& allocator =  MallocBuddyAllocator::getInstance();
-    size_t delta = metadata->useage - size;
     allocator.getFreeBytes() += metadata->useage - size;
     metadata->useage = size;
     return oldp;
@@ -461,7 +460,7 @@ size_t _num_meta_data_bytes(){
     return MallocBuddyAllocator::getInstance().getMetaDataBytes();
 }
 
-size_t _size_meta_data_bytes(){
+size_t _size_meta_data(){
     return sizeof(MallocMetadata);
 }
 
