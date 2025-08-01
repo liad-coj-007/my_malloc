@@ -7,6 +7,7 @@ struct MallocMetadata {
     size_t size;
     MallocMetadata* next;
     MallocMetadata* prev;
+    long wow[4];
 };
 
  
@@ -57,6 +58,8 @@ private:
     */
     void BuildHeap();
 
+    MetadataPtr FindInList(MetadataPtr list);
+
     /**
      * @brief find a free block of memory
     */
@@ -70,11 +73,7 @@ private:
      * metadata < newdata
     */
     void Push(MetadataPtr metadata,MetadataPtr newdata);
-    /**
-     * @brief Add metadata to the allocator's metadata list.
-     * @param metadata The metadata pointer to add.
-    */
-    void AddMeta(MetadataPtr metadata);
+
     /**
      * @brief return true if the datas is buddies else
      * false
@@ -84,10 +83,7 @@ private:
      * , false otherwise.
     */
     bool isBuddy(MetadataPtr a, MetadataPtr b);
-    /**
-     * @brief erase the metadata from the free list.
-    */
-    void Erase(MetadataPtr metadata);
+
 
     /**
      * @brief connect the buddies in the high order
@@ -104,6 +100,18 @@ private:
     size_t DoFunc(size_t (*f)(size_t, MetadataPtr),MetadataPtr metadata);
 
 public:
+
+
+    /**
+     * @brief Add metadata to the allocator's metadata list.
+     * @param metadata The metadata pointer to add.
+    */
+    void AddMeta(MetadataPtr metadata);
+    /**
+     * @brief erase the metadata from the free list.
+    */
+    void Erase(MetadataPtr metadata);
+
     /**
      * @brief build the allocator
     */
@@ -161,6 +169,8 @@ public:
      * and applies the provided function to each metadata block.
     */
     size_t DoFunc(size_t (*f)(size_t, MetadataPtr));
+
+    bool is_on_list(MetadataPtr metadata);
     
 
 };
@@ -230,3 +240,5 @@ size_t _num_meta_data_bytes();
  * @brief returns the size of single meta data
 */
 size_t _size_meta_data();
+
+size_t aux(MetadataPtr meta);

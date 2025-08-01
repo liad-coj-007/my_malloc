@@ -2,10 +2,10 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug test2 (malloc_2.cpp + test2.cpp)",
+      "name": "Debug 3",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/test2",
+      "program": "${workspaceFolder}/main",
       "args": [],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
@@ -20,7 +20,7 @@
           "ignoreFailures": true
         }
       ],
-      "preLaunchTask": "build test2"
+      "preLaunchTask": "build main"
     }
   ]
 }
